@@ -30,11 +30,12 @@ class PSComputator:
             plt.show()
             plt.clf()
             
-        
-        for i,row in enumerate(self.histograms):
-            for j,his in enumerate(row):
-                print("[",i,",",j,"] :")
-                convert_dict_to_hist(his.data,[ i for i in range(1,1+self.Dim*self.Dim) ])
+        ''' Loop over the resulting histograms and display them '''
+        for sol_his in self.histograms:
+            for i,row in enumerate(sol_his):
+                for j,his in enumerate(row):
+                    print("[",i,",",j,"] :")
+                    convert_dict_to_hist(his.data,[ i for i in range(1,1+self.Dim*self.Dim) ])
                 
     def compute_phase_space(self):
         ''' Computes the space of possible solutions if each clue is removed '''
