@@ -33,16 +33,21 @@ class JobPool:
             self.done += 1
             self.actv -= 1
         
+        ''' Break condition '''
         if self.head == len(self.jobp):
-            return
+            return False
+        
+        ''' Launch worker '''
         t = Thread(target=worker,args=[self.head])
         self.head += 1
         self.actv += 1
         t.start()
-        return
+        return True
     
     def run(self):
         while self.done < self.njob:
             while self.actv < self.nthr:
-                self.start_next()
+                print("Job #"+str(self.head),"of",self.njob,"(",self.done,")")
+                if not self.start_next():
+                    break
             time.sleep(self.Refresh)
