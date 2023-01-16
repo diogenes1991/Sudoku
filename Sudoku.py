@@ -3,7 +3,7 @@ from Histogram import Histogram
 
 class Sudoku:
     
-    def __init__(self,board):
+    def __init__(self,board,experimental=False):
         self.board = board
         ''' Check if the dimensions are right '''
         width = len(board)
@@ -17,8 +17,14 @@ class Sudoku:
         self.Dim = counter
         
         ''' Solution Generator '''
-        self.sol_gen = self.find_solution()
-        
+        if not experimental:
+            self.sol_gen = self.find_solution()
+        else:
+            self.sol_gen = self.find_solution_experimental()
+            
+        ''' Performance trackers '''
+        self.ret_no_yield = 0
+        self.calls        = 0
 
     def get_square(self,i,j):
         ''' Returns an array with the elements of the square containing cell [i,j] '''
@@ -65,7 +71,22 @@ class Sudoku:
     
         ''' Fetch the (lexicographically) smallest empty cell '''
         [i,j] = self.get_conditional_first(lambda x : (x == 0))
+        
+        ''' Collect all possible options and recursively try all posibilities '''
+        options = self.find_options(i,j)
+        for opt in options:
+            self.board[i][j] = opt
+            yield from self.find_solution()
+            self.board[i][j] = 0
+        return
     
+    
+    def find_options(self,i,j):
+        
+        ''' Skip non-empty cells '''
+        if self.board[i][j] != 0:
+            return []
+        
         ''' Find the missing numbers within its row, column and square '''
         missing_row = find_missing( self.board[i] ,[ k for k in range(1,1+self.Dim*self.Dim) ])
         missing_col = find_missing([ self.board[k][j] for k in range(self.Dim*self.Dim)],[ k for k in range(1,1+self.Dim*self.Dim) ])
@@ -80,13 +101,47 @@ class Sudoku:
         missing = []
         find_common(missing_row,missing_col,missing)
         find_common(missing_sqr,missing,options)
+        
+        return options
     
+    def find_all_options(self):
+        
+        ''' Collect all options '''  
+        self.options = [ [ self.find_options(i,j) for j in range(self.Dim*self.Dim) ] for i in range(self.Dim*self.Dim) ]
+        
+    def find_solution_experimental(self):
+        
+        self.calls += 1
+        
+        ''' Exit condition, only checks if there are non-empty cells '''
+        if self.isDone():
+            yield self.board
+            return
+            
+        ''' Re-compute all options and sort the entries by least options '''
+        self.find_all_options()
+        coordinates = []
+        for i in range(self.Dim*self.Dim):
+            for j in range(self.Dim*self.Dim):
+                if len(self.options[i][j]):
+                    coordinates.append( [[i,j],len(self.options[i][j])] )
+        if len(coordinates) == 0:
+            self.ret_no_yield += 1
+            return
+        coordinates.sort( key = lambda x: x[1] )
+        
+        ''' Get the one with the least amount of options '''
+        [i,j] = coordinates[0][0]
+        
         ''' Recursively try all posibilities '''
+        options = self.options[i][j]
         for opt in options:
             self.board[i][j] = opt
-            yield from self.find_solution()
+            yield from self.find_solution_experimental()
             self.board[i][j] = 0
+        self.ret_no_yield += 1
         return
+            
     
     def collect_solutions(self):
         ''' Aggragates into histograms of the entries all the possible solutions of a sudoku '''
